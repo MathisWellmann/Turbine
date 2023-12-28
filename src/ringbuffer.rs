@@ -1,10 +1,10 @@
 use std::cell::UnsafeCell;
 use std::iter::repeat;
 
-macro_rules! is_pow2{
-    ($x:ident) => (
-      (($x != 0) && ($x & ($x - 1)) == 0)
-    );
+macro_rules! is_pow2 {
+    ($x:ident) => {
+        (($x != 0) && ($x & ($x - 1)) == 0)
+    };
 }
 
 /// A container for data inside the RingBuffer
@@ -44,24 +44,21 @@ pub trait Slot: Send {
 }
 
 pub struct RingBuffer<T> {
-    entries: UnsafeCell<Vec<T>>
+    entries: UnsafeCell<Vec<T>>,
 }
 
 unsafe impl<T: Slot> Send for RingBuffer<T> {}
 unsafe impl<T: Slot> Sync for RingBuffer<T> {}
 
 impl<T: Slot> RingBuffer<T> {
-
     pub fn new(size: usize) -> RingBuffer<T> {
         let entries: UnsafeCell<Vec<T>> = match size {
             0 => panic!("Buffer Size must be greater than zero."),
             s if !(is_pow2!(s)) => panic!("Buffer Size must be a power of two"),
-            _ => UnsafeCell::new(repeat(()).take(size).map(|_| Slot::new()).collect())
+            _ => UnsafeCell::new(repeat(()).take(size).map(|_| Slot::new()).collect()),
         };
 
-        RingBuffer::<T> {
-            entries: entries
-        }
+        RingBuffer::<T> { entries: entries }
     }
 
     pub fn get_capacity(&self) -> usize {
@@ -72,7 +69,7 @@ impl<T: Slot> RingBuffer<T> {
     // Unsafe because we have no guarantees the caller won't invalidate this slot
     pub unsafe fn get(&self, from: usize, size: usize) -> &[T] {
         debug!("              RingBuffer get({}, {})", from, size);
-        &self.entries.get().as_ref().unwrap()[from .. from + size]
+        &self.entries.get().as_ref().unwrap()[from..from + size]
     }
 
     // Unsafe because we have no guarantees the caller won't invalidate this slot
@@ -80,7 +77,6 @@ impl<T: Slot> RingBuffer<T> {
         self.entries.get().as_mut().unwrap()[position] = data;
     }
 }
-
 
 #[cfg(test)]
 mod tests {

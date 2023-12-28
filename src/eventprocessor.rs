@@ -1,21 +1,17 @@
-
-
+use crate::paddedatomics::Padded64;
+use crate::ringbuffer::{RingBuffer, Slot};
+use crate::waitstrategy::WaitStrategy;
 use std::sync::Arc;
-use waitstrategy::WaitStrategy;
-use paddedatomics::Padded64;
-use ringbuffer::{RingBuffer, Slot};
 
 /// EventProcessors provide functionality to process and consume data from the ring buffer
 pub struct EventProcessor<T> {
     graph: Arc<Vec<Vec<usize>>>,
     cursors: Arc<Vec<Padded64>>,
     token: usize,
-    ring: Arc<RingBuffer<T>>
+    ring: Arc<RingBuffer<T>>,
 }
 
-
 impl<T: Slot> EventProcessor<T> {
-
     /// Instantiate a new EventProcessor.
     ///
     /// This accepts several important parameters and is for internal use only.
@@ -23,12 +19,17 @@ impl<T: Slot> EventProcessor<T> {
     /// - graph: a dependency graph, showing how all the EPs relate to eachother.
     /// - cursors: a vector of Padded64 atomics which act as cursors into the ring buffer
     /// - token: the index in the graph which represents this EP
-    pub fn new(ring: Arc<RingBuffer<T>>, graph: Arc<Vec<Vec<usize>>>, cursors: Arc<Vec<Padded64>>, token: usize) -> EventProcessor<T> {
+    pub fn new(
+        ring: Arc<RingBuffer<T>>,
+        graph: Arc<Vec<Vec<usize>>>,
+        cursors: Arc<Vec<Padded64>>,
+        token: usize,
+    ) -> EventProcessor<T> {
         EventProcessor::<T> {
-            graph: graph,
-            cursors: cursors,
-            token: token,
-            ring: ring
+            graph,
+            cursors,
+            token,
+            ring,
         }
     }
 
@@ -58,7 +59,9 @@ impl<T: Slot> EventProcessor<T> {
     ///});
     ///```
     pub fn start<F, W: WaitStrategy>(&self, mut f: F)
-    where F: FnMut(&[T]) -> Result<(),()> {
+    where
+        F: FnMut(&[T]) -> Result<(), ()>,
+    {
         let capacity = self.ring.get_capacity();
 
         let wait_strategy: W = WaitStrategy::new(capacity);
@@ -77,7 +80,10 @@ impl<T: Slot> EventProcessor<T> {
         let mut rollover = (false, 0);
 
         loop {
-            debug!("              Current: {}, waiting on: {}", internal_cursor, internal_cursor);
+            debug!(
+                "              Current: {}, waiting on: {}",
+                internal_cursor, internal_cursor
+            );
 
             let available = wait_strategy.wait_for(internal_cursor, &deps);
             debug!("							Available: {}", available);
@@ -85,22 +91,37 @@ impl<T: Slot> EventProcessor<T> {
             let from = (internal_cursor & mask) as usize;
             let mut to = (available & mask) as usize;
 
-            debug!("              from: {}, to: {} -- {}", from, to, (to < from));
+            debug!(
+                "              from: {}, to: {} -- {}",
+                from,
+                to,
+                (to < from)
+            );
             if to < from {
                 debug!("						ROLLOVER");
                 rollover = (true, to);
                 to = capacity;
             } else if (to == from) && (internal_cursor < available) {
                 //complete buffer request
-                debug!("						ROLLOVER (total) -- ({} == {}) && ({} < {})", to, from, internal_cursor, available);
+                debug!(
+                    "						ROLLOVER (total) -- ({} == {}) && ({} < {})",
+                    to, from, internal_cursor, available
+                );
                 rollover = (true, to);
                 to = capacity;
             } else if to == from {
-                debug!("						WTF to == from    -- ({} == {}) && ({} < {})", to, from, internal_cursor, available);
+                debug!(
+                    "						WTF to == from    -- ({} == {}) && ({} < {})",
+                    to, from, internal_cursor, available
+                );
             }
 
-
-            debug!("              Post-modification from: {}, to: {} -- {}", from, to, (to < from));
+            debug!(
+                "              Post-modification from: {}, to: {} -- {}",
+                from,
+                to,
+                (to < from)
+            );
 
             // This is safe because the Producer task cannot invalidate these slots
             // before we increment our cursor.  Since the slice is borrowed out, we
@@ -117,18 +138,21 @@ impl<T: Slot> EventProcessor<T> {
                     let data: &[T] = self.ring.get(0, rollover.1);
                     f(data)
                 };
-                rollover = (false,0);
+                rollover = (false, 0);
             }
 
             internal_cursor = available;
             cursor.store(internal_cursor);
-            debug!("					Finished processing event.  Cursor @ {} ({})", available, available & mask);
+            debug!(
+                "					Finished processing event.  Cursor @ {} ({})",
+                available,
+                available & mask
+            );
 
             match status {
                 Err(_) => break,
                 Ok(_) => {}
             };
-
         }
         debug!("BusyWait::end");
     }

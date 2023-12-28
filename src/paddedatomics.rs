@@ -1,22 +1,18 @@
-
-#![allow(dead_code)]
-
-use std::sync::atomic::Ordering::SeqCst;
-use atomicnum::AtomicNum;
+use std::sync::atomic::{AtomicU64, Ordering::SeqCst};
 
 //------------------------- Padded 64 -------------------------//
 
 /// AtomicInt padded with 64 bytes
 pub struct Padded64 {
-    p: [u64; 7],
-    counter: AtomicNum<u64>
+    _p: [u64; 7],
+    counter: AtomicU64,
 }
 
 impl Padded64 {
     pub fn new(x: u64) -> Padded64 {
         Padded64 {
-            p: [0u64,0u64,0u64,0u64,0u64,0u64,0u64],
-            counter: AtomicNum::new(x)
+            _p: [0u64, 0u64, 0u64, 0u64, 0u64, 0u64, 0u64],
+            counter: AtomicU64::new(x),
         }
     }
     #[inline]

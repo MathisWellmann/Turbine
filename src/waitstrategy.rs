@@ -1,10 +1,8 @@
-
-use paddedatomics::Padded64;
-use std::cmp::{min};
+use crate::paddedatomics::Padded64;
+use std::cmp::min;
 
 /// A trait which provides a unified interface to various waiting strategies
 pub trait WaitStrategy {
-
     /// Instantiate a new WaitStrategy. Must provide the size of the underlying buffer
     fn new(ring_size: usize) -> Self;
 
@@ -24,10 +22,10 @@ pub trait WaitStrategy {
 
 /// An implementation of WaitStrategy that busy-spins while waiting
 ///
-/// This strategy should have the best perforamnce and keep caches hot, but will chew
+/// This strategy should have the best performance and keep caches hot, but will chew
 /// CPU while there is no work to be done.
 pub struct BusyWait {
-    ring_size: usize
+    ring_size: usize,
 }
 
 impl BusyWait {
@@ -40,12 +38,14 @@ impl BusyWait {
 
             if sequence == cursor {
                 debug!("					Same as dep cursor, abort!");
-                return None;	// at same position as a dependency. we can't move
+                return None; // at same position as a dependency. we can't move
             }
             min_cursor = min(min_cursor, cursor);
-            debug!("					dep cursor: {}, ring_size: {}, sequence: {}", cursor, self.ring_size as isize, sequence);
+            debug!(
+                "					dep cursor: {}, ring_size: {}, sequence: {}",
+                cursor, self.ring_size as isize, sequence
+            );
             debug!("					min_cursor: {}", min_cursor);
-
         }
         Some(min_cursor)
     }
@@ -54,7 +54,7 @@ impl BusyWait {
 impl WaitStrategy for BusyWait {
     fn new(ring_size: usize) -> BusyWait {
         BusyWait {
-            ring_size: ring_size
+            ring_size: ring_size,
         }
     }
 
@@ -69,8 +69,8 @@ impl WaitStrategy for BusyWait {
             match self.can_read(sequence, deps) {
                 Some(v) => {
                     available = v;
-                    break
-                },
+                    break;
+                }
                 None => {}
             }
         }
