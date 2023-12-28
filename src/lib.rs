@@ -305,7 +305,6 @@ impl<T: Slot> Turbine<T> {
 
         self.graph = Arc::new(eps);
         self.cursors = Arc::new(cursors);
-        drop(&self.epb);
         self.finalized = true;
     }
 
@@ -385,7 +384,7 @@ impl<T: Slot> Turbine<T> {
                 //let diff = self.current_pos - v.load();
                 min_cursor = min(min_cursor, v.load());
 
-                if self.current_pos - min_cursor >= self.size as u64 {
+                if self.current_pos.wrapping_sub(min_cursor) >= self.size as u64 {
                     debug!(
                         "Not writeable!  {} - {} == {}, which is >= {}",
                         self.current_pos,
@@ -668,9 +667,7 @@ mod test {
         t.write(x);
 
         assert!(t.current_pos == 1);
-        if rx.recv().is_err() == true {
-            panic!()
-        }
+        assert!(rx.recv().is_ok());
         //debug!("Test::end");
     }
 
@@ -1169,7 +1166,11 @@ mod test {
             counter += 1;
             let end = precise_time_ns();
             let start = rx_bench.recv().ok().unwrap();
-            let total = ((end - start) as i64).abs() as u64; // because ticks can go backwards between different cores
+            let total = if end > start {
+                end - start
+            } else {
+                start - end
+            }; // because ticks can go backwards between different cores
             latencies.push(total);
             //error!("{}, {}, {}", start, end, total);
         }

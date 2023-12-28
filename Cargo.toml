@@ -1,15 +1,26 @@
 [package]
 name = "turbine"
 version = "0.2.0"
-authors = [ "zacharyjtong@gmail.com", "bogusandre@gmail.com", "MathisWellmann <wellmannmathis@gmail.com>" ]
+authors = [
+  "zacharyjtong@gmail.com",
+  "bogusandre@gmail.com",
+  "MathisWellmann <wellmannmathis@gmail.com>",
+]
 description = "Turbine - a high-performance, non-locking, inter-task communication library"
 license = "MIT/ASL2"
 edition = "2021"
 
+[lints.rust]
+unused_imports = "deny"
+unused_crate_dependencies = "deny"
+dead_code = "deny"
+
+[lints.clippy]
+all = "deny"
+
 [dependencies]
 log = "0.4"
-rand = "0.8"
 
 [dev-dependencies]
 libc = "0.2"
-time = "0.3"
+rand = "0.8"

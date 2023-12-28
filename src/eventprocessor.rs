@@ -71,7 +71,6 @@ impl<T: Slot> EventProcessor<T> {
         for ep in dep_eps.iter() {
             deps.push(&(*self.cursors).as_slice()[*ep]);
         }
-        drop(dep_eps);
 
         let ref cursor = &(*self.cursors).as_slice()[self.token + 1];
 
